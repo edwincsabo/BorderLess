@@ -27,7 +27,7 @@ En **Preferencias → Apariencia y ventana → Idioma de la aplicación**, selec
 
 El puntero auxiliar se utiliza solo al recibir control y cuando Windows oculta su cursor. Ahora toma la imagen y el punto de clic del cursor real: flecha, mano, texto, redimensionamiento horizontal/vertical/diagonal, movimiento, no disponible y espera. Los cursores de espera estándar pueden animarse. Las formas dependen del cursor que publique la aplicación de destino: un botón que normalmente usa flecha seguirá mostrándola. Las aplicaciones que dibujan su cursor por separado pueden no publicar esa forma.
 
-No se cambia el tema de cursores de Windows, no se activa Mouse Keys ni se instalan controladores. La opción Mostrar puntero auxiliar cuando Windows lo oculta conserva su comportamiento. Falta comprobar el cambio de forma con la torre sin mouse físico y los periféricos en SWO.
+No se cambia el tema de cursores de Windows, no se activa Mouse Keys ni se instalan controladores. La opción Mostrar puntero auxiliar cuando Windows lo oculta conserva su comportamiento. Falta comprobar el cambio de forma con el receptor sin mouse físico y los periféricos en el PC de origen.
 
 ## Pausar, volver al PC y salir
 

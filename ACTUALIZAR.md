@@ -14,7 +14,7 @@ En **Archivos → Carpeta de recepción → Cambiar carpeta** puedes elegir un d
 
 ## Idioma y cursor
 
-En Preferencias → Apariencia y ventana puedes elegir Español o English. Se guarda por PC. Para probar el cursor, conecta los periféricos a SWO y controla la torre: comprueba enlaces, campos de texto y bordes de ventana. La forma se toma de Windows; cada aplicación decide qué cursor publica.
+En Preferencias → Apariencia y ventana puedes elegir Español o English. Se guarda por PC. Para probar el cursor, conecta los periféricos al PC de origen y controla el otro PC: comprueba enlaces, campos de texto y bordes de ventana. La forma se toma de Windows; cada aplicación decide qué cursor publica.
 
 ## Optimizaciones conservadas
 
@@ -53,4 +53,4 @@ El PIN vence a los 2 minutos, admite 5 intentos y es de un solo uso. Cerrar u oc
 - Prueba buscar, conectar con PIN y cancelar; un PIN correcto vincula sin segunda confirmación.
 - Verifica bandeja, modo oscuro y Ctrl + Alt + F12.
 
-Se observó un bloqueo de Control de aplicaciones (0x800711C7) sobre una compilación intermedia sin firma; las pruebas de la compilación final pudieron ejecutarse sin cambiar políticas ni instalar certificados. Si Windows bloquea el paquete en alguno de tus PCs, conserva la versión anterior y revisa el bloqueo con el responsable de esa política. El detalle de aquella incidencia está en VALIDACION_0.1.6.md. No se ha modificado Zscaler, FortiClient ni el firewall.
+Se observó un bloqueo de Control de aplicaciones (0x800711C7) sobre una compilación intermedia sin firma; las pruebas de la compilación final pudieron ejecutarse sin cambiar políticas ni instalar certificados. Si Windows bloquea el paquete en alguno de tus PCs, conserva la versión anterior y revisa el bloqueo con el responsable de esa política. No se ha modificado Zscaler, FortiClient ni el firewall.
