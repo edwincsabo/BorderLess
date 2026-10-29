@@ -1,0 +1,15 @@
+BorderLess para Windows 11 x64 / for Windows 11 x64
+
+ESPAÑOL
+Sal de todas las instancias de BorderLess antes de instalar. La X mantiene la aplicación en la bandeja; utiliza Salir.
+La instalación es por usuario. No instala servicios, cambia firewall, configura inicio automático ni solicita administrador para instalar.
+Los datos se guardan en %LOCALAPPDATA%\BorderLess\data y se conservan al desinstalar. La carpeta de archivos recibidos puede elegirse en Archivos.
+Si usas la versión portable, puedes importar su carpeta data de ESTE PC y ESTE usuario. No se copian ni se borran archivos recibidos. La ruta de recepción anterior se conserva; puedes cambiarla después.
+Para controlar una app elevada, ejecuta BorderLess como administrador en el receptor cuando sea necesario. Esto es independiente de los permisos del instalador.
+
+ENGLISH
+Exit all running copies of BorderLess before installing. Closing the window keeps it in the tray; use Exit.
+Installation is per user. It does not install services, change the firewall, set up automatic startup, or request administrator rights to install.
+Data is stored in %LOCALAPPDATA%\BorderLess\data and kept on uninstall. Choose the received files folder in Files.
+If you use the portable version, optionally import its data folder from THIS PC and THIS user. Received files are not copied or deleted. The previous receipt path is kept and can be changed later.
+To control an elevated app, run BorderLess as administrator on the receiver when needed. This is separate from installer permissions.

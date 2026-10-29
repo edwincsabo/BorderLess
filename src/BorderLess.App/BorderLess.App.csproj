@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>BorderLess</AssemblyName><RootNamespace>BorderLess.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest><ApplicationIcon>Assets\BorderLess.ico</ApplicationIcon><Version>0.1.10</Version>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="..\BorderLess.Core\BorderLess.Core.csproj" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets\BorderLess.ico" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Localization\en.json" /></ItemGroup>
+  <ItemGroup><Content Include="..\..\vendor\bouncycastle\LICENSE.md" Link="BouncyCastle-LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>
+</Project>

@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+.dotnet/
+.packages/
+dist/
+artifacts/
+data/
+*.user
+tools/
+vendor/inno/*.exe
+vendor/inno/*.log
+vendor/packages/*.nupkg
+vendor/bouncycastle/*.xml
+evidencias/
+fuentes/
+artifacts/
+*.log

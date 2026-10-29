@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/"><Project Path="src/BorderLess.Core/BorderLess.Core.csproj"/><Project Path="src/BorderLess.App/BorderLess.App.csproj"/><Project Path="src/BorderLess.Relay/BorderLess.Relay.csproj"/></Folder>
+  <Folder Name="/tests/"><Project Path="tests/BorderLess.Tests/BorderLess.Tests.csproj"/><Project Path="tests/BorderLess.Windows.Tests/BorderLess.Windows.Tests.csproj"/></Folder>
+  <Folder Name="/benchmarks/"><Project Path="tests/BorderLess.Benchmarks/BorderLess.Benchmarks.csproj"/></Folder>
+</Solution>
