@@ -19,6 +19,7 @@ public sealed class AppSettings
     public bool AllowFiles { get; set; }
     public bool DarkMode { get; set; }
     public bool PauseOnLock { get; set; } = true;
+    public bool KeepAwakeWhenConnected { get; set; }
     public string Language { get; set; } = "es";
     public string ReceiveDirectory { get; set; } = "";
     public bool AllowControl { get; set; } = true;

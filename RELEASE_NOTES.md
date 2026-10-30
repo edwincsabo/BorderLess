@@ -1,6 +1,8 @@
-# BorderLess 0.1.10
+# BorderLess 0.1.11
 
 Mouse, teclado, portapapeles y archivos entre PCs Windows 11 x64, sin transmisión de pantalla.
+
+Nuevo en 0.1.11: **Preferencias → Mantener el equipo activo**. Opción desactivada por defecto, guardada por PC, que solicita a Windows evitar suspensión y apagado de pantalla mientras exista una conexión autenticada. Se libera al pausar, desconectar el último equipo, bloquear, suspender o salir. No simula entrada ni cambia políticas de seguridad; el bloqueo corporativo puede seguir aplicándose.
 
 - Instalador por usuario con runtime incluido y migración opcional del perfil portable del mismo PC.
 - Carpeta de recepción configurable por equipo.

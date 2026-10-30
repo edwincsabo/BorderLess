@@ -454,5 +454,18 @@
   "La carpeta de recepción debe ser una ruta absoluta.": "The received files folder must be an absolute path.",
   "Cada archivo se guarda en su propia subcarpeta, sin sobrescribir archivos existentes. No se abre automáticamente. Cambiar carpeta afecta a nuevas recepciones; los archivos existentes no se mueven.": "Each file is saved in its own subfolder without overwriting existing files and is not opened automatically. Changing folders affects new receipts; existing files are not moved.",
   "0.1.10 · Windows": "0.1.10 · Windows",
-  "BorderLess 0.1.10 | Diagnóstico\nNo incluye teclas, claves, códigos ni contenido del portapapeles o archivos.\n": "BorderLess 0.1.10 | Diagnostics\nDoes not include keys, secrets, codes, clipboard or file content.\n"
+  "BorderLess 0.1.10 | Diagnóstico\nNo incluye teclas, claves, códigos ni contenido del portapapeles o archivos.\n": "BorderLess 0.1.10 | Diagnostics\nDoes not include keys, secrets, codes, clipboard or file content.\n",
+  "Solo en este PC: solicita mantener la pantalla encendida y evitar la suspensión automática. Se libera al pausar, desconectar el último equipo, bloquear Windows o salir. Funciona también en la bandeja.": "On this PC only: requests the display to stay on and prevents automatic sleep. Released when paused, the last device disconnects, Windows locks or the app exits. Also works in the tray.",
+  "Mantener activo mientras haya otro equipo conectado": "Keep awake while another device is connected",
+  "En espera · conecta otro equipo": "Waiting · connect another device",
+  "Inactivo · uso compartido en pausa": "Inactive · sharing paused",
+  "Inactivo · Windows bloqueado": "Inactive · Windows locked",
+  "No impide el bloqueo manual ni garantiza evitar políticas de bloqueo de Windows o de la empresa. Mantener la pantalla encendida puede aumentar el consumo de batería.": "Does not prevent manual locking or guarantee overriding Windows or company lock policies. Keeping the display on may increase battery use.",
+  "No disponible · Windows rechazó la solicitud de energía": "Unavailable · Windows rejected the power request",
+  "Inactivo · equipo suspendido": "Inactive · PC suspended",
+  "Mantener el equipo activo": "Keep this PC awake",
+  "BorderLess mantiene una conexión activa con otro equipo.": "BorderLess has an active connection to another device.",
+  "Activo · pantalla y equipo en uso": "Active · display and PC in use",
+  "0.1.11 · Windows": "0.1.11 · Windows",
+  "BorderLess 0.1.11 | Diagnóstico\nNo incluye teclas, claves, códigos ni contenido del portapapeles o archivos.\n": "BorderLess 0.1.11 | Diagnostics\nDoes not include keys, secrets, codes, clipboard or file content.\n"
 }

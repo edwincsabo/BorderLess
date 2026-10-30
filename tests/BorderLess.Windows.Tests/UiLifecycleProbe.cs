@@ -108,6 +108,13 @@ internal static class UiLifecycleProbe
                     Check(files.ReceiveDirectory == chosenFolder && new SettingsStore(path).ReceiveDirectory == chosenFolder && ((TextBlock)window.FindName("ReceiveFolder")).Text == chosenFolder, "Cambiar carpeta actualiza servicio, pantalla y preferencia persistente");
                     await (Task)saveFolder.Invoke(window, new object[] { System.IO.Path.Combine(path, "received"), true })!;
                     Check(store.Settings.ReceiveDirectory == "" && files.ReceiveDirectory == System.IO.Path.Combine(path, "received"), "Usar predeterminada restaura el destino sin renombrar el perfil");
+                    var powerField = typeof(MainWindow).GetField("keepAwake", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                    ((KeepAwake)powerField.GetValue(window)!).Dispose();
+                    var power = new KeepAwake(() => new KeepAwakeTests.Lease()); powerField.SetValue(window, power);
+                    var powerOption = (CheckBox)window.FindName("KeepAwakeWhenConnected");
+                    Check(powerOption.IsChecked == false && !power.Active, "Mantener activo está apagado en una ventana nueva");
+                    powerOption.IsChecked = true;
+                    Check(new SettingsStore(path).Settings.KeepAwakeWhenConnected && !power.Active, "Opción se guarda pero espera una conexión real");
                     typeof(MainWindow).GetMethod("OpenPairing", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, new object[] { window, new RoutedEventArgs() });
                     var tabs = (TabControl)window.FindName("PairTabs"); tabs.SelectedIndex = 1;
                     ((Button)window.FindName("GeneratePinButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -121,6 +128,8 @@ internal static class UiLifecycleProbe
                     await pair.WaitAsync(TimeSpan.FromSeconds(12));
                     Check(window.FindName("PinApprovalBox") == null, "PIN correcto vincula sin panel ni botón de confirmación adicional");
                     Check(new SettingsStore(path).Settings.Peers.Any(p => p.Id == partnerId) && hub.Inputs.ContainsKey(partnerId), "Permitir desde la pantalla persiste el vínculo y conecta entrada");
+                    await Until(() => power.Active);
+                    Check(((TextBlock)window.FindName("KeepAwakeStatus")).Text.StartsWith("Activo"), "Conexión TLS activa actualiza la solicitud y el estado visible");
                     await Until(() => ((TextBox)window.FindName("PinOutput")).Text == "Sin código activo");
                     Check(!hub.ShortCodeStatus.Active, "La pantalla retira el código después de usarlo");
                     await Preview("paired");
@@ -139,11 +148,14 @@ internal static class UiLifecycleProbe
                     Check(files.Enabled && hub.Listening, "Ventana de prueba tiene servicio y recepción activos");
                     window.Close(); await Task.Delay(100);
                     Check(!window.IsVisible && hub.Listening && files.Enabled, "Cerrar con X oculta la ventana y conserva los servicios activos");
+                    Check(power.Active, "Mantener activo continúa en la bandeja con un equipo conectado");
                     window.Show(); window.Activate();
                     Check(window.IsVisible, "Ventana oculta se restaura conservando la instancia");
                     var pause = (Button)window.FindName("PauseButton"); pause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     Check(!files.Enabled && store.Settings.AllowFiles, "Pausa suspende archivos sin borrar la preferencia habilitada");
+                    await Until(() => !power.Active); Check(!power.Active, "Pausa real de la interfaz libera energía");
                     pause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Check(files.Enabled, "Reanudar restablece la preferencia de archivos");
+                    await Until(() => power.Active);
                     var lockOption = (CheckBox)window.FindName("PauseWhenLocked");
                     var route = (InputRouter)typeof(MainWindow).GetField("router", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
                     var applyLock = typeof(MainWindow).GetMethod("ApplySessionLock", BindingFlags.Instance | BindingFlags.NonPublic)!;
@@ -156,6 +168,7 @@ internal static class UiLifecycleProbe
                     Check(!new SettingsStore(path).Settings.PauseOnLock, "Cambiar la opción desde preferencias se guarda");
                     applyLock.Invoke(window, new object[] { true }); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
                     Check(!route.Paused && files.Enabled && route.SessionLocked, "Preferencia desactivada mantiene archivos activos durante bloqueo simulado");
+                    Check(!power.Active, "Bloqueo libera energía aunque la pausa automática esté desactivada");
                     applyLock.Invoke(window, new object[] { false }); pause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     applyLock.Invoke(window, new object[] { true }); applyLock.Invoke(window, new object[] { false }); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
                     Check(route.Paused && route.ManualPause && ((TextBlock)window.FindName("PauseNoticeText")).Text.Contains("manualmente"), "Aviso diferencia pausa manual y esta sobrevive al desbloqueo");
@@ -163,11 +176,22 @@ internal static class UiLifecycleProbe
                     await PausePreview("manual");
                     pause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     await Dispatcher.Yield(DispatcherPriority.ApplicationIdle); await PausePreview("active");
+                    if (Environment.GetEnvironmentVariable("BORDERLESS_SCREENSHOTS") is string powerCapturePath && !string.IsNullOrWhiteSpace(powerCapturePath))
+                    {
+                        powerOption.BringIntoView(); window.UpdateLayout();
+                        var card = (Border)((FrameworkElement)powerOption.Parent).Parent;
+                        var drawing = new DrawingVisual();
+                        using (var context = drawing.RenderOpen()) context.DrawRectangle(new VisualBrush(card), null, new Rect(0, 0, card.ActualWidth, card.ActualHeight));
+                        var frame = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(card.ActualWidth), (int)Math.Ceiling(card.ActualHeight), 96, 96, PixelFormats.Pbgra32); frame.Render(drawing);
+                        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(frame));
+                        using var output = System.IO.File.Create(System.IO.Path.Combine(powerCapturePath, "keep-awake.png")); encoder.Save(output);
+                    }
                     var language = (ComboBox)window.FindName("LanguageChoice"); language.SelectedValue = "en"; await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
                     Check(Equals(((Button)window.FindName("DevicesNav")).Content, "Devices") && Equals(((Button)window.FindName("SettingsNav")).Content, "Preferences"), "Cambiar a inglés actualiza la navegación sin reiniciar");
                     Check(new SettingsStore(path).Settings.Language == "en" && ((TextBlock)window.FindName("LocalName")).Text == store.Settings.DisplayName, "Idioma persiste sin cambiar el nombre del equipo");
                     Check(UiLanguage.Text("Controlando Preferencias") == "Controlling Preferencias" && UiLanguage.Text("No se pudo controlar TORRE: GCC tiene permisos superiores a BorderLess. Abre BorderLess como administrador en ese PC y vuelve a solicitar control.").Contains("GCC has higher privileges"), "Estados dinámicos se traducen y mantienen nombres originales");
                     Check(Equals(((Button)window.FindName("PauseButton")).Content, "Pause sharing") && Equals(((Button)window.FindName("PinConnectButton")).Content, "Pair with PIN"), "Botones dinámicos siguen traducidos tras cambios de estado");
+                    Check(Equals(powerOption.Content, "Keep awake while another device is connected"), "Nueva preferencia se traduce al inglés sin reiniciar");
                     await Preview("language");
                     language.SelectedValue = "es"; await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
                     Check(Equals(((Button)window.FindName("DevicesNav")).Content, "Equipos") && new SettingsStore(path).Settings.Language == "es", "Volver a español restaura los textos y guarda la preferencia");
@@ -178,8 +202,11 @@ internal static class UiLifecycleProbe
                         typeof(MainWindow).GetMethod("QueueStatusRefresh", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
                         await Dispatcher.Yield(DispatcherPriority.ApplicationIdle); await Preview("permissions");
                     }
-                    Console.WriteLine($"{checks} comprobaciones de UI y bandeja completadas.");
+                    hub.Inputs[partnerId].Close("Fin de la conexión de prueba");
+                    await Until(() => !power.Active); Check(!power.Active, "Desconexión del último canal de entrada libera energía desde el evento de red");
                     window.SystemExit();
+                    Check(!power.Active, "Salir deja liberado el objeto de energía");
+                    Console.WriteLine($"{checks} comprobaciones de UI y bandeja completadas.");
                 }
                 catch (Exception ex) { failure = ex; window.SystemExit(); }
             };

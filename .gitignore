@@ -13,5 +13,4 @@ vendor/packages/*.nupkg
 vendor/bouncycastle/*.xml
 evidencias/
 fuentes/
-artifacts/
 *.log

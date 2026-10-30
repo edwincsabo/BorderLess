@@ -2,7 +2,7 @@
 
 Un mouse y un teclado para tus PCs Windows 11. Controla otro equipo al cruzar el borde de la pantalla y comparte texto, imágenes y archivos mediante conexiones cifradas. No transmite la pantalla.
 
-**Versión 0.1.10 · Windows 11 x64 · Español / English**
+**Versión 0.1.11 · Windows 11 x64 · Español / English**
 
 [Descargas y versiones](https://github.com/edwincsabo/BorderLess/releases) · [Instalación](INSTALAR.md) · [Guía de uso](COMO_USAR.md) · [Actualizar portable](ACTUALIZAR.md) · [Licencia](LICENSE)
 
@@ -14,11 +14,18 @@ Un mouse y un teclado para tus PCs Windows 11. Controla otro equipo al cruzar el
 - Portapapeles de texto e imágenes; archivos opcionales con aceptación individual.
 - Alias, mapa de PCs y monitores y carpeta de recepción configurable.
 - Temas claro y oscuro, español e inglés, bandeja de Windows.
+- Opción por PC para mantener pantalla y sistema activos mientras haya una conexión autenticada, respetando bloqueo y políticas de Windows.
 - Conexión directa por LAN/VPN y relay propio opcional para internet.
 
 ## Capturas
 
 Interfaz real renderizada con datos de prueba y rutas ficticias.
+
+### Mantener el equipo activo (0.1.11)
+
+Opción por PC, desactivada por defecto. Se libera al pausar, bloquear, suspender, salir o perder la última conexión. Windows y las políticas de la empresa pueden limitar su efecto.
+
+![Preferencia para mantener el equipo activo mientras existe una conexión](docs/images/keep-awake.png)
 
 ### Modo oscuro
 

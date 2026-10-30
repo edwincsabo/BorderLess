@@ -216,6 +216,7 @@ Check(firstIdentity.GetCertHashString() == secondIdentity.GetCertHashString() &&
 await PausePolicyTests.RunAsync(Check);
 await InputFailureTests.RunAsync(Check);
 ProfileLocationTests.Run(Check);
+KeepAwakeTests.Run(Check);
 Console.WriteLine($"\n{passed} comprobaciones de integración Windows completadas (sin inyección física).");
 
 sealed class FakeDesktop : IInputDesktop

@@ -1,14 +1,14 @@
-# Actualizar BorderLess portable 0.1.x a 0.1.10
+# Actualizar BorderLess portable 0.1.x a 0.1.11
 
 Esta versión permite elegir la carpeta de archivos recibidos y añade un instalador. Conserva vínculos y preferencias. Para pasar al formato instalable conservando tu perfil, sigue **INSTALAR.md**. Los pasos siguientes corresponden a la versión portable.
 
-1. Extrae `BorderLess-0.1.10-actualizacion-win-x64.zip` en una carpeta temporal en cada PC.
+1. Extrae `BorderLess-0.1.11-actualizacion-win-x64.zip` en una carpeta temporal en cada PC.
 2. Sal de BorderLess desde el menú de su icono en la bandeja → **Salir**, o desde Preferencias. La X mantiene el proceso activo y no basta para reemplazarlo.
-3. Copia **todos los archivos que están dentro de Copiar_en_BorderLess-0.1.10** a la carpeta habitual del programa, junto a runtime, aceptando reemplazar archivos. Incluye BouncyCastle.Cryptography.dll y su licencia: no copies solamente el EXE.
+3. Copia **todos los archivos que están dentro de Copiar_en_BorderLess-0.1.11** a la carpeta habitual del programa, junto a runtime, aceptando reemplazar archivos. Incluye BouncyCastle.Cryptography.dll y su licencia: no copies solamente el EXE.
 4. Conserva **data** y **runtime**. No copies data de un PC al otro. Los vínculos, alias, preferencias y archivos recibidos permanecen allí.
-5. Abre BorderLess.exe en ambos PCs y comprueba **0.1.10** abajo a la izquierda. La reconexión existente se mantiene.
+5. Abre BorderLess.exe en ambos PCs y comprueba **0.1.11** abajo a la izquierda. La reconexión existente se mantiene.
 
-Para un portable nuevo utiliza `BorderLess-0.1.10-win-x64.zip`, que incluye runtime. La actualización pequeña requiere una instalación portable existente.
+Para un portable nuevo utiliza `BorderLess-0.1.11-win-x64.zip`, que incluye runtime. La actualización pequeña requiere una instalación portable existente.
 
 En **Archivos → Carpeta de recepción → Cambiar carpeta** puedes elegir un destino guardado por PC. Las recepciones nuevas usarán ese destino; los archivos anteriores no se mueven y una transferencia en curso conserva su ubicación. **Usar carpeta predeterminada** restablece `data/received` del perfil actual.
 

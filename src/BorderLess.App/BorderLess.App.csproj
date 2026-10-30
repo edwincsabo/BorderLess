@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>BorderLess</AssemblyName><RootNamespace>BorderLess.App</RootNamespace>
-    <ApplicationManifest>app.manifest</ApplicationManifest><ApplicationIcon>Assets\BorderLess.ico</ApplicationIcon><Version>0.1.10</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest><ApplicationIcon>Assets\BorderLess.ico</ApplicationIcon><Version>0.1.11</Version>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="..\BorderLess.Core\BorderLess.Core.csproj" /></ItemGroup>
   <ItemGroup><Resource Include="Assets\BorderLess.ico" /></ItemGroup>

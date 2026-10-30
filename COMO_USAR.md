@@ -1,6 +1,6 @@
-# BorderLess 0.1.10 para Windows 11 x64
+# BorderLess 0.1.11 para Windows 11 x64
 
-Puedes usar el instalador `BorderLess-0.1.10-setup-win-x64.exe` siguiendo **INSTALAR.md**, o conservar la versión portable. Si ya utilizas un portable 0.1.x, consulta `ACTUALIZAR.md` para conservar vínculos y preferencias. La 0.1.10 añade una carpeta de recepción configurable y conserva las funciones y optimizaciones anteriores.
+Puedes usar el instalador `BorderLess-0.1.11-setup-win-x64.exe` siguiendo **INSTALAR.md**, o conservar la versión portable. Si ya utilizas un portable 0.1.x, consulta `ACTUALIZAR.md` para conservar vínculos y preferencias. La 0.1.11 añade una carpeta de recepción configurable y conserva las funciones y optimizaciones anteriores.
 
 ## Primera conexión por cable
 
@@ -39,6 +39,16 @@ No se cambia el tema de cursores de Windows, no se activa Mouse Keys ni se insta
 En **Preferencias → Pausa y bloqueo de Windows**, la opción **Pausar el uso compartido al bloquear Windows** viene activada. Puedes desactivarla individualmente en cada PC. Si está activada, bloquear suspende los servicios y desbloquear los reactiva; una pausa manual no se elimina al desbloquear. Si está desactivada, la app no pausa automáticamente portapapeles ni archivos al bloquear. El acceso efectivo al portapapeles sigue sujeto a Windows.
 
 Esta opción no permite controlar ni capturar periféricos en la pantalla de bloqueo. Al bloquear siempre se libera la sesión de control remoto y se revoca el PIN pendiente. Después de desbloquear puedes volver a controlar; no se repiten teclas retenidas ni se recupera automáticamente el control anterior. La suspensión del equipo, desconexión de red y cierre de sesión siguen siendo situaciones diferentes.
+
+## Mantener el equipo activo mientras está conectado
+
+En **Preferencias → Mantener el equipo activo**, activa **Mantener activo mientras haya otro equipo conectado** en cada PC donde lo necesites. Viene desactivado y se guarda individualmente. Un equipo vinculado pero desconectado no activa la función.
+
+Mientras exista al menos una conexión de entrada autenticada y el uso compartido no esté pausado, BorderLess solicita a Windows mantener pantalla y sistema activos. No hace falta estar controlando el otro PC; también funciona con la ventana en la bandeja. El estado se muestra debajo de la opción.
+
+La solicitud se libera al pausar, desmarcar la opción, desconectar el último equipo, bloquear Windows, suspender o salir. Al reanudar o reconectar vuelve a solicitarse si se cumplen las condiciones. No mueve el puntero, no escribe teclas, no añade tráfico de red y no modifica configuraciones de energía ni políticas del equipo.
+
+Windows decide si respeta la solicitud. No desbloquea una sesión ni impide Win + L, suspensión manual, cierre de tapa o políticas empresariales de bloqueo. Mantener la pantalla encendida puede aumentar el consumo de batería. Una conexión cortada se considera perdida cuando la red o el heartbeat detectan el cierre, no necesariamente en el instante en que se retira un cable.
 
 ## Portapapeles
 

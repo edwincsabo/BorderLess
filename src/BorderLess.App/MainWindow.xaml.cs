@@ -38,17 +38,18 @@ public partial class MainWindow : Window
         foreach (var peer in store.Settings.Peers) hub.Credentials[peer.Id] = peer.Credentials();
         router = new InputRouter(hub, store.Settings);
         files = new FileTransferService(hub, store.ReceiveDirectory);
-        router.Changed += () => { SyncFilesEnabled(); QueueTrayRefresh(); QueueStatusRefresh(); };
+        router.Changed += () => { SyncFilesEnabled(); QueueTrayRefresh(); QueueStatusRefresh(); QueuePowerRefresh(); };
         hub.Activity += diagnostic => Dispatcher.BeginInvoke(new Action(() => AddActivity(diagnostic)));
         hub.Paired += peer => Dispatcher.Invoke(() => { store.SavePeer(peer); RememberDesktop(peer.Id); RefreshDevices(); PairFeedbackMessage($"{peer.Name} está vinculado. La conexión ya está cifrada."); });
-        hub.Connected += session => Dispatcher.BeginInvoke(new Action(() => { RememberDesktop(session.Peer.Id); QueueTrayRefresh(); QueueStatusRefresh(); }));
-        hub.Disconnected += (_, _) => Dispatcher.BeginInvoke(new Action(() => { mapDirty = true; QueueTrayRefresh(); QueueStatusRefresh(); }));
+        hub.Connected += session => Dispatcher.BeginInvoke(new Action(() => { RememberDesktop(session.Peer.Id); QueueTrayRefresh(); QueueStatusRefresh(); RefreshPower(); }));
+        hub.Disconnected += (_, _) => Dispatcher.BeginInvoke(new Action(() => { mapDirty = true; QueueTrayRefresh(); QueueStatusRefresh(); if (!closing) RefreshPower(); }));
         PeerList.ItemsSource = devices; ActivityList.ItemsSource = activity;
         LocalName.Text = store.Settings.DisplayName;
         AllowControl.IsChecked = store.Settings.AllowControl; AutoEdges.IsChecked = store.Settings.AutoEdges;
         ShareText.IsChecked = store.Settings.ShareText; ShareImages.IsChecked = store.Settings.ShareImages;
         PointerFallback.IsChecked = store.Settings.PointerFallback;
         PauseWhenLocked.IsChecked = store.Settings.PauseOnLock;
+        KeepAwakeWhenConnected.IsChecked = store.Settings.KeepAwakeWhenConnected;
         RelayHost.Text = store.Settings.RelayHost; RelayPort.Text = store.Settings.RelayPort.ToString();
         InitializePresentation();
         InitializeFiles();
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
         UiLanguage.Instance.PropertyChanged += LanguageUpdated;
         timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => { router.RefreshLocalKeyboardState(); router.Tick(); if (++metricsTicks % 2 == 0 && viewGate.Visible && DevicesPage.IsVisible) QueueStatusRefresh(); }, Dispatcher);
         initialized = true;
+        RefreshPower();
         RefreshDevices();
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized && tray != null) Hide(); viewGate.SetVisible(IsVisible && WindowState != WindowState.Minimized); if (viewGate.Visible) QueueStatusRefresh(); };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape && PairOverlay.Visibility == Visibility.Visible) { ClosePairing(this, new RoutedEventArgs()); e.Handled = true; } };
@@ -109,10 +111,19 @@ public partial class MainWindow : Window
         if (closing) return;
         if (locked) StopPinPairing();
         router.SetSessionLocked(locked);
+        RefreshPower();
         hub.Log(locked ? store.Settings.PauseOnLock ? "Windows bloqueado: pausa automática del uso compartido; se reanudará al desbloquear salvo pausa manual." : "Windows bloqueado: servicios activos por preferencia; control liberado y PIN revocado." : router.Paused ? "Windows desbloqueado: se conserva la pausa manual." : "Windows desbloqueado: uso compartido activo.");
     }
     private void PowerChanged(object sender, PowerModeChangedEventArgs e)
-    { if (e.Mode == PowerModes.Suspend) Dispatcher.BeginInvoke(new Action(() => { StopPinPairing(); router.EmergencyReturn("Suspensión: control local recuperado."); })); }
+    {
+        if (e.Mode is PowerModes.Suspend or PowerModes.Resume) Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (closing) return;
+            powerSuspended = e.Mode == PowerModes.Suspend;
+            if (powerSuspended) { StopPinPairing(); router.EmergencyReturn("Suspensión: control local recuperado."); }
+            RefreshPower();
+        }));
+    }
     private void AddActivity(Diagnostic diagnostic)
     {
         history.Enqueue(diagnostic); while (history.Count > 150) history.Dequeue();
@@ -249,7 +260,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            var text = new StringBuilder(UiLanguage.Text("BorderLess 0.1.10 | Diagnóstico\nNo incluye teclas, claves, códigos ni contenido del portapapeles o archivos.\n"));
+            var text = new StringBuilder(UiLanguage.Text("BorderLess 0.1.11 | Diagnóstico\nNo incluye teclas, claves, códigos ni contenido del portapapeles o archivos.\n"));
             text.AppendLine(UiLanguage.Text("Estado actual: ") + UiLanguage.Text(router.Status));
             text.AppendLine(UiLanguage.Text($"Pausa: activa={router.Paused}; manual={router.ManualPause}; Windows bloqueado={router.SessionLocked}; pausar al bloquear={store.Settings.PauseOnLock}"));
             foreach (var line in router.Diagnostics.Export().Split('\n')) if (line.Length > 0) text.AppendLine(UiLanguage.Text(line));
@@ -268,6 +279,7 @@ public partial class MainWindow : Window
             return;
         }
         e.Cancel = true; closing = true; StopPinPairing(); lifetime.Cancel(); timer.Stop(); router.EmergencyReturn();
+        keepAwake.Dispose();
         SystemEvents.SessionSwitch -= SessionSwitch; SystemEvents.PowerModeChanged -= PowerChanged;
         SystemEvents.DisplaySettingsChanged -= DisplaysChanged; displayDebounce?.Stop();
         remotePointer?.Dispose(); clipboard?.Dispose(); capture?.Dispose();
