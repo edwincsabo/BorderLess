@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly SettingsStore store;
     private readonly NetworkHub hub;
     private readonly InputRouter router;
+    private readonly WindowsInputDesktop localDesktop = new();
     private readonly FileTransferService files;
     private readonly ObservableCollection<DeviceViewModel> devices = new();
     private readonly ObservableCollection<Diagnostic> activity = new();
@@ -36,7 +37,7 @@ public partial class MainWindow : Window
         this.store = store;
         hub = new NetworkHub(store.LoadIdentity());
         foreach (var peer in store.Settings.Peers) hub.Credentials[peer.Id] = peer.Credentials();
-        router = new InputRouter(hub, store.Settings);
+        router = new InputRouter(hub, store.Settings, localDesktop);
         files = new FileTransferService(hub, store.ReceiveDirectory);
         router.Changed += () => { SyncFilesEnabled(); QueueTrayRefresh(); QueueStatusRefresh(); QueuePowerRefresh(); };
         hub.Activity += diagnostic => Dispatcher.BeginInvoke(new Action(() => AddActivity(diagnostic)));
@@ -46,6 +47,7 @@ public partial class MainWindow : Window
         PeerList.ItemsSource = devices; ActivityList.ItemsSource = activity;
         LocalName.Text = store.Settings.DisplayName;
         AllowControl.IsChecked = store.Settings.AllowControl; AutoEdges.IsChecked = store.Settings.AutoEdges;
+        FastEdges.IsChecked = store.Settings.FastEdgeCrossing;
         ShareText.IsChecked = store.Settings.ShareText; ShareImages.IsChecked = store.Settings.ShareImages;
         PointerFallback.IsChecked = store.Settings.PointerFallback;
         PauseWhenLocked.IsChecked = store.Settings.PauseOnLock;
@@ -65,6 +67,7 @@ public partial class MainWindow : Window
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape && PairOverlay.Visibility == Visibility.Visible) { ClosePairing(this, new RoutedEventArgs()); e.Handled = true; } };
         PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape && AliasOverlay.Visibility == Visibility.Visible) { CloseAlias(this, new RoutedEventArgs()); e.Handled = true; } };
         SystemEvents.SessionSwitch += SessionSwitch;
+        PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape && AddressOverlay.IsVisible) { CloseAddress(this, new RoutedEventArgs()); e.Handled = true; } };
         SystemEvents.PowerModeChanged += PowerChanged;
     }
     private void WindowReady(object? sender, EventArgs e)
@@ -160,6 +163,7 @@ public partial class MainWindow : Window
         UiText.Text(NetworkStatus, hub.Inputs.Count == 0 ? "TLS · esperando equipos" : $"TLS · {hub.Inputs.Count} equipo(s) · entrada y portapapeles separados");
         if (hub.RelayEnabled) UiText.Text(RelayStatus, hub.RelayWaiting > 0 ? "Relay disponible · esperando conexiones de tus equipos" : "Conectando con relay… Comprueba servidor, puerto y accesibilidad.");
         if (FilesPage.IsVisible) RefreshFileView();
+        if (ActivityPage.IsVisible) RefreshLatencyControls();
     }
     private void Navigate(object sender, RoutedEventArgs e)
     {
@@ -236,6 +240,7 @@ public partial class MainWindow : Window
     {
         if (!initialized) return;
         store.Settings.AllowControl = AllowControl.IsChecked == true; store.Settings.AutoEdges = AutoEdges.IsChecked == true;
+        store.Settings.FastEdgeCrossing = FastEdges.IsChecked == true;
         store.Settings.ShareText = ShareText.IsChecked == true; store.Settings.ShareImages = ShareImages.IsChecked == true;
         store.Settings.PointerFallback = PointerFallback.IsChecked == true;
         store.Settings.PauseOnLock = PauseWhenLocked.IsChecked == true; router.SetPauseOnLock(store.Settings.PauseOnLock);
@@ -260,7 +265,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            var text = new StringBuilder(UiLanguage.Text("BorderLess 0.1.11 | Diagnóstico\nNo incluye teclas, claves, códigos ni contenido del portapapeles o archivos.\n"));
+            var text = new StringBuilder(UiLanguage.Text("BorderLess 0.1.14 | Diagnóstico\nNo incluye teclas, claves, códigos ni contenido del portapapeles o archivos.\n"));
             text.AppendLine(UiLanguage.Text("Estado actual: ") + UiLanguage.Text(router.Status));
             text.AppendLine(UiLanguage.Text($"Pausa: activa={router.Paused}; manual={router.ManualPause}; Windows bloqueado={router.SessionLocked}; pausar al bloquear={store.Settings.PauseOnLock}"));
             foreach (var line in router.Diagnostics.Export().Split('\n')) if (line.Length > 0) text.AppendLine(UiLanguage.Text(line));

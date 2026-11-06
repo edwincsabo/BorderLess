@@ -48,10 +48,14 @@ public partial class MainWindow
         hub.DesktopChanged += id => Dispatcher.BeginInvoke(new Action(() => RememberDesktop(id)));
         PublishDesktop();
     }
-    private void DisplaysChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(new Action(() => { if (closing) return; displayDebounce?.Stop(); displayDebounce?.Start(); }));
+    private void DisplaysChanged(object? sender, EventArgs e)
+    {
+        localDesktop.InvalidateGeometry();
+        Dispatcher.BeginInvoke(new Action(() => { if (closing) return; displayDebounce?.Stop(); displayDebounce?.Start(); }));
+    }
     private void PublishDesktop()
     {
-        hub.UpdateDesktop(DesktopInventory.Capture(store.Settings.DisplayName));
+        hub.UpdateDesktop(localDesktop.RefreshGeometry(store.Settings.DisplayName));
         LocalName.Text = store.Settings.DisplayName; LocalMachineName.Text = store.Settings.Name;
         mapDirty = true; QueueStatusRefresh();
     }

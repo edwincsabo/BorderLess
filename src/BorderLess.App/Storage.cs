@@ -25,6 +25,7 @@ public sealed class AppSettings
     public bool AllowControl { get; set; } = true;
     public bool PointerFallback { get; set; } = true;
     public bool AutoEdges { get; set; } = true;
+    public bool FastEdgeCrossing { get; set; }
     public bool AutoReconnect { get; set; } = true;
     public string RelayHost { get; set; } = "";
     public int RelayPort { get; set; } = 45162;
@@ -99,6 +100,19 @@ public sealed class SettingsStore
             Settings.Peers.RemoveAll(p => p.Id == peer.Id);
             Settings.Peers.Add(new SavedPeer { Id = peer.Id, Name = peer.Name, Fingerprint = peer.Fingerprint, ProtectedKey = SecretProtection.Protect(peer.Key), Host = peer.Host, Port = peer.Port, Initiator = peer.Initiator, RelayRoom = peer.RelayRoom, Edge = edge, Alias = previous?.Alias ?? "", LastDesktop = previous?.LastDesktop });
             Save();
+        }
+    }
+    public void SaveAddress(PeerCredentials verified)
+    {
+        lock (gate)
+        {
+            var peer = Settings.Peers.Find(p => p.Id == verified.Id && p.Fingerprint == verified.Fingerprint)
+                ?? throw new InvalidOperationException("El vínculo cambió durante la conexión.");
+            var previous = (peer.Host, peer.Port);
+            peer.Host = verified.Host;
+            peer.Port = verified.Port;
+            try { Save(); }
+            catch { (peer.Host, peer.Port) = previous; throw; }
         }
     }
     public void SetAlias(Guid id, string alias)

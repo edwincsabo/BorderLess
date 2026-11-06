@@ -90,7 +90,7 @@ for (var batch = 0; batch < 100; batch++)
     for (var j = 0; j < 200; j++)
     {
         var index = batch * 200 + j + 1;
-        if (!session.Send(Frame.FromInput(new(InputKind.Move, index, epoch, index, 0)))) throw new IOException("Burst rejected.");
+        if (!session.SendInput(new(InputKind.Move, index, epoch, index, 0))) throw new IOException("Burst rejected.");
     }
     await Task.Delay(7);
 }

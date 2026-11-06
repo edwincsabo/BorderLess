@@ -5,9 +5,11 @@ using BorderLess.App;
 using BorderLess.Core;
 
 if (args.Contains("--native-keyboard")) { NativeKeyboardProbe.Run(); return; }
+if (args.Contains("--mouse-cost")) { MouseCostProbe.Run(); return; }
 if (args.Contains("--native-mouse")) { NativeMouseProbe.Run(); return; }
 if (args.Contains("--display-cadence")) { DisplayFrameProbe.Run(); return; }
 if (args.Contains("--ui-lifecycle")) { UiLifecycleProbe.Run(); return; }
+if (args.Contains("--latency-diagnostic")) { UiLifecycleProbe.Run(latencyProbe: true); return; }
 if (args.Contains("--clipboard-pipeline")) { ClipboardPipelineProbe.Run(); return; }
 if (args.Contains("--cursor-artwork")) { CursorArtworkProbe.Run(); return; }
 if (args.Contains("--ui-preview-pin")) { UiLifecycleProbe.Run(true); return; }
@@ -217,6 +219,8 @@ await PausePolicyTests.RunAsync(Check);
 await InputFailureTests.RunAsync(Check);
 ProfileLocationTests.Run(Check);
 KeepAwakeTests.Run(Check);
+MousePathTests.Run(Check);
+await AddressReconnectTests.RunAsync(Check);
 Console.WriteLine($"\n{passed} comprobaciones de integración Windows completadas (sin inyección física).");
 
 sealed class FakeDesktop : IInputDesktop

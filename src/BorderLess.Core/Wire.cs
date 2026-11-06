@@ -10,7 +10,8 @@ public readonly record struct Frame(PacketKind Kind, byte[] Payload, long Create
 {
     public static Frame Json<T>(PacketKind kind, T data) => new(kind, JsonSerializer.SerializeToUtf8Bytes(data), Stopwatch.GetTimestamp());
     public T Read<T>() => JsonSerializer.Deserialize<T>(Payload) ?? throw new InvalidDataException("Mensaje vacío.");
-    public static Frame FromInput(InputEvent input)
+    public static Frame FromInput(InputEvent input) => FromInput(input, Stopwatch.GetTimestamp());
+    internal static Frame FromInput(InputEvent input, long created)
     {
         var bytes = new byte[49];
         bytes[0] = (byte)input.Kind;
@@ -20,7 +21,7 @@ public readonly record struct Frame(PacketKind Kind, byte[] Payload, long Create
         BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(33), input.Y);
         BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(41), input.Code);
         BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(45), input.Data);
-        return new Frame(PacketKind.Input, bytes, Stopwatch.GetTimestamp());
+        return new Frame(PacketKind.Input, bytes, created);
     }
     public InputEvent ReadInput()
     {
@@ -81,26 +82,40 @@ public static class Wire
 public sealed class InputOutbox
 {
     private readonly object gate = new();
-    private readonly Queue<Frame> reliable = new();
-    private Frame? move;
+    private readonly record struct Entry(Frame Frame, InputEvent? Move, long Created)
+    {
+        public Frame Materialize() => Move is { } input ? BorderLess.Core.Frame.FromInput(input, Created) : Frame;
+    }
+    private readonly Queue<Entry> reliable = new();
+    private Entry? move;
     private readonly Channel<bool> available = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { SingleReader = true, FullMode = BoundedChannelFullMode.DropWrite, AllowSynchronousContinuations = false });
     public int Count { get { lock (gate) return reliable.Count + (move is null ? 0 : 1); } }
     public long Coalesced { get; private set; }
     public bool Enqueue(Frame frame)
     {
+        bool replaceable = frame.Kind == PacketKind.Input && frame.Payload.Length == 49 && frame.Payload[0] == (byte)InputKind.Move;
+        return Enqueue(new Entry(frame, null, 0), replaceable);
+    }
+    public bool EnqueueInput(InputEvent input)
+    {
+        if (input.Kind != InputKind.Move) return Enqueue(Frame.FromInput(input));
+        return Enqueue(new Entry(default, input, Stopwatch.GetTimestamp()), true);
+    }
+    private bool Enqueue(Entry entry, bool replaceable)
+    {
         lock (gate)
         {
             var wasEmpty = reliable.Count == 0 && move == null;
-            if (frame.Kind == PacketKind.Input && frame.Payload.Length == 49 && frame.Payload[0] == (byte)InputKind.Move)
+            if (replaceable)
             {
                 if (move != null) Coalesced++;
-                move = frame;
+                move = entry;
                 if (wasEmpty) available.Writer.TryWrite(true);
                 return true;
             }
             if (reliable.Count >= 510) return false;
             if (move is { } pending) { reliable.Enqueue(pending); move = null; }
-            reliable.Enqueue(frame);
+            reliable.Enqueue(entry);
             if (wasEmpty) available.Writer.TryWrite(true);
             return true;
         }
@@ -108,13 +123,18 @@ public sealed class InputOutbox
     public ValueTask<bool> WaitForDataAsync(CancellationToken cancellationToken) => available.Reader.ReadAsync(cancellationToken);
     public bool TryTake(out Frame frame)
     {
+        Entry entry;
         lock (gate)
         {
-            if (reliable.TryDequeue(out frame)) return true;
-            if (move is { } pending) { frame = pending; move = null; return true; }
-            frame = default;
-            return false;
+            if (!reliable.TryDequeue(out entry))
+            {
+                if (move is not { } pending) { frame = default; return false; }
+                entry = pending;
+                move = null;
+            }
         }
+        frame = entry.Materialize();
+        return true;
     }
 }
 

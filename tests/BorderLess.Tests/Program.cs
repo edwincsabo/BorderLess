@@ -11,6 +11,8 @@ async Task Eventually(Func<bool> condition, string description, int ms = 6000)
     Check(condition(), description);
 }
 var epoch = Guid.NewGuid();
+Check(LatencyResult.Summarize(new double[] { 51, 1, 3, 2 }, 4) == new LatencyResult(4, 2.5, 51, 4), "Un pico de RTT se distingue de la mediana y del máximo de cola observado");
+Check(LatencyResult.Summarize(Array.Empty<double>(), 0).MedianMs == null, "Sin respuestas no se presenta un RTT de cero");
 var desktopA = new DesktopSnapshot(new[] { new DisplayMonitor("DISPLAY1", -1920, 0, 1920, 1080, false, 100), new DisplayMonitor("DISPLAY2", 0, 0, 2560, 1440, true, 125) }, "Torre");
 desktopA.Validate();
 Check(DesktopSnapshot.Same(desktopA, desktopA with { Monitors = desktopA.Monitors.ToArray() }), "Pantallas iguales no provocan publicaciones o redibujos repetidos");

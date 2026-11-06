@@ -11,7 +11,7 @@ using BorderLess.Core;
 
 internal static class UiLifecycleProbe
 {
-    public static void Run(bool previewPin = false, bool previewPause = false, bool previewImprovements = false, bool previewLanguage = false)
+    public static void Run(bool previewPin = false, bool previewPause = false, bool previewImprovements = false, bool previewLanguage = false, bool latencyProbe = false)
     {
         Exception? failure = null;
         var thread = new Thread(() =>
@@ -93,13 +93,28 @@ internal static class UiLifecycleProbe
                         folderLabel.Text = originalLabel; ThemeManager.Apply(true);
                     }
                     await Preview("files");
-                    updateRows.Invoke(window, new object[] { new[] { view with { Bytes = 100, State = TransferState.Completed }, waitingRow } });
+                    var savedPath = System.IO.Path.Combine(path, "original destination", "ejemplo, uno.txt");
+                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(savedPath)!);
+                    System.IO.File.WriteAllText(savedPath, "fixture");
+                    string? revealed = null;
+                    typeof(MainWindow).GetField("showReceivedFile", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, (Action<string>)(file => revealed = file));
+                    updateRows.Invoke(window, new object[] { new[] { view with { Bytes = 100, State = TransferState.Completed, SavedPath = savedPath }, waitingRow } });
+                    window.UpdateLayout();
+                    var showFile = Descendants<Button>(transferList).Single(b => Equals(b.Content, "Mostrar en carpeta") && b.IsVisible);
+                    showFile.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await Until(() => revealed == savedPath);
+                    Check(revealed == savedPath, "Mostrar en carpeta usa la ruta guardada del archivo recibido");
+                    System.IO.File.Delete(savedPath); revealed = null;
+                    showFile.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await Until(() => ((TextBlock)window.FindName("RevealFeedback")).Text.Contains("ubicación original"));
+                    Check(revealed == null, "Archivo retirado muestra aviso sin abrir el Explorador");
                     Check(ReferenceEquals(rows[0], firstRow), "Completar una transferencia conserva la identidad de su fila");
                     Check(((SolidColorBrush)window.Foreground).Color == ((SolidColorBrush)ThemeManager.Brush("TextBrush")).Color, "Ventana hereda texto claro del modo oscuro");
                     var theme = (ComboBox)window.FindName("ThemeChoice"); theme.SelectedIndex = 0; window.UpdateLayout();
                     Check(!ThemeManager.Dark && !new SettingsStore(path).Settings.DarkMode, "Cambiar a Claro se aplica y persiste");
                     theme.SelectedIndex = 1; window.UpdateLayout();
                     Check(ThemeManager.Dark && new SettingsStore(path).Settings.DarkMode, "Cambiar a Oscuro se aplica y persiste");
+                    var fastEdges = (CheckBox)window.FindName("FastEdges");
+                    fastEdges.IsChecked = true;
+                    Check(new SettingsStore(path).Settings.FastEdgeCrossing, "Preferencia de cruce rápido se guarda por equipo");
                     var hub = (NetworkHub)typeof(MainWindow).GetField("hub", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
                     var files = (FileTransferService)typeof(MainWindow).GetField("files", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
                     var saveFolder = typeof(MainWindow).GetMethod("SaveReceiveFolderAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
@@ -133,6 +148,22 @@ internal static class UiLifecycleProbe
                     await Until(() => ((TextBox)window.FindName("PinOutput")).Text == "Sin código activo");
                     Check(!hub.ShortCodeStatus.Active, "La pantalla retira el código después de usarlo");
                     await Preview("paired");
+                    if (latencyProbe)
+                    {
+                        ((Button)window.FindName("ActivityNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        var measure = (Button)window.FindName("LatencyButton");
+                        var result = (TextBlock)window.FindName("LatencyStatus");
+                        await Until(() => measure.IsEnabled);
+                        measure.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        measure.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        await Until(() => result.Text == "Medición cancelada.");
+                        Check(measure.IsEnabled, "Cancelar desde Actividad permite iniciar una medición nueva");
+                        measure.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        var deadline = DateTime.UtcNow.AddSeconds(45);
+                        while (!result.Text.Contains("RTT mediano") && DateTime.UtcNow < deadline) await Task.Delay(100);
+                        Check(result.Text.Contains("RTT mediano") && result.Text.Contains("cola local máxima observada") && result.Text.Contains(partner.Identity.Name), "Actividad mide 30 segundos sobre el canal TLS y presenta resultados para el equipo elegido");
+                        Console.WriteLine(result.Text);
+                    }
                     partner.Start(0); var reverseCode = partner.CreateShortCode();
                     tabs.SelectedIndex = 0;
                     ((TextBox)window.FindName("PinHost")).Text = "127.0.0.1";
@@ -202,8 +233,36 @@ internal static class UiLifecycleProbe
                         typeof(MainWindow).GetMethod("QueueStatusRefresh", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
                         await Dispatcher.Yield(DispatcherPriority.ApplicationIdle); await Preview("permissions");
                     }
+                    if (latencyProbe)
+                    {
+                        ((Button)window.FindName("ActivityNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+                        ((Button)window.FindName("LatencyButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    }
+                    var staleAddress = hub.Credentials[partnerId] with { Port = 1 };
+                    hub.Credentials[partnerId] = staleAddress; store.SaveAddress(staleAddress);
                     hub.Inputs[partnerId].Close("Fin de la conexión de prueba");
+                    if (latencyProbe)
+                    {
+                        await Until(() => ((TextBlock)window.FindName("LatencyStatus")).Text == "Medición interrumpida al desconectarse el equipo.");
+                        Check(!((Button)window.FindName("LatencyButton")).IsEnabled, "Desconectar cancela la prueba sin publicar muestras de otra sesión");
+                    }
                     await Until(() => !power.Active); Check(!power.Active, "Desconexión del último canal de entrada libera energía desde el evento de red");
+                    ((Button)window.FindName("DevicesNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Button? editAddress() => Descendants<Button>((ItemsControl)window.FindName("PeerList")).FirstOrDefault(b => Equals(b.Content, "Actualizar dirección") && Equals(b.Tag, partnerId) && b.IsEnabled);
+                    await Until(() => editAddress() != null);
+                    editAddress()!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    var overlay = (Grid)window.FindName("AddressOverlay");
+                    var addressHost = (TextBox)window.FindName("AddressHost");
+                    var verify = (Button)window.FindName("VerifyAddressButton");
+                    Check(overlay.IsVisible && ((TextBox)window.FindName("AddressPort")).Text == "1", "Ficha del equipo desconectado abre el editor con la dirección anterior");
+                    addressHost.Text = "host/invalido"; ((TextBox)window.FindName("AddressPort")).Text = partner.Port.ToString();
+                    verify.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    await Until(() => ((TextBlock)window.FindName("AddressFeedback")).Text.StartsWith("Indica una IP"));
+                    Check(overlay.IsVisible && new SettingsStore(path).Settings.Peers.Single(p => p.Id == partnerId).Port == 1, "Una dirección inválida deja el editor abierto y conserva los datos");
+                    addressHost.Text = "127.0.0.1"; verify.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    await Until(() => !overlay.IsVisible && hub.Inputs.TryGetValue(partnerId, out var restored) && restored.Connected);
+                    Check(new SettingsStore(path).Settings.Peers.Single(p => p.Id == partnerId).Port == partner.Port, "Verificar y reconectar desde la ficha guarda el nuevo puerto sin usar PIN");
                     window.SystemExit();
                     Check(!power.Active, "Salir deja liberado el objeto de energía");
                     Console.WriteLine($"{checks} comprobaciones de UI y bandeja completadas.");

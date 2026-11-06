@@ -11,6 +11,7 @@ public sealed class DeviceViewModel : INotifyPropertyChanged
     public string Name => peer.Name;
     public string DisplayName => peer.DisplayName;
     public bool Online { get; private set; }
+    public bool CanEditAddress => !Online && peer.Initiator && string.IsNullOrEmpty(peer.RelayRoom);
     public string Status { get; private set; } = "Sin conexión";
     public string Detail { get; private set; } = "";
     private static readonly Brush Ready = CreateBrush(18, 102, 92), Offline = CreateBrush(89, 106, 102);
@@ -24,7 +25,7 @@ public sealed class DeviceViewModel : INotifyPropertyChanged
         var online = hub.Inputs.TryGetValue(Id, out var session) && session.Connected;
         var status = !online ? "Sin conexión · vínculo guardado" : paused ? "Conectado · entrada pausada" : active == Id ? "Control activo en este equipo remoto" : controlling == Id ? "Este equipo está controlando tu PC" : "Conectado · listo para controlar";
         var detail = online ? $"TLS cifrado  ·  {(session!.Rtt > 0 ? $"RTT {session.Rtt:F0} ms" : "midiendo red")}  ·  {(hub.Clipboards.ContainsKey(Id) ? "portapapeles conectado" : "portapapeles reconectando")}" : peer.Initiator ? (peer.RelayRoom == "" ? $"Conexión directa · {peer.Host}:{peer.Port}" : "Conexión mediante relay") : "Se reconectará cuando el otro PC vuelva a estar disponible";
-        if (online != Online) { Online = online; OnChanged(nameof(Online)); OnChanged(nameof(StatusColor)); }
+        if (online != Online) { Online = online; OnChanged(nameof(Online)); OnChanged(nameof(StatusColor)); OnChanged(nameof(CanEditAddress)); }
         if (Status != status) { Status = status; OnChanged(nameof(Status)); }
         if (Detail != detail) { Detail = detail; OnChanged(nameof(Detail)); }
     }

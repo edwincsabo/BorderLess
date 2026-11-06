@@ -1,8 +1,12 @@
-# BorderLess 0.1.11
+# BorderLess 0.1.14
 
 Mouse, teclado, portapapeles y archivos entre PCs Windows 11 x64, sin transmisión de pantalla.
 
-Nuevo en 0.1.11: **Preferencias → Mantener el equipo activo**. Opción desactivada por defecto, guardada por PC, que solicita a Windows evitar suspensión y apagado de pantalla mientras exista una conexión autenticada. Se libera al pausar, desconectar el último equipo, bloquear, suspender o salir. No simula entrada ni cambia políticas de seguridad; el bloqueo corporativo puede seguir aplicándose.
+Nuevo en 0.1.14: actualiza la dirección de un equipo vinculado tras verificar su identidad, localiza el archivo recibido desde su transferencia y activa el cruce rápido de borde en Preferencias.
+
+Desde 0.1.13: BorderLess reutiliza la geometría de los monitores y prepara para envío los movimientos que se conservan en la cola. Los clics, teclas y rueda mantienen su orden.
+
+Disponible desde 0.1.12: **Actividad → Medir durante 30 segundos**. Selecciona el equipo conectado y usa el mouse con normalidad. Verás el RTT mediano y el máximo, el número de muestras y la mayor profundidad observada de la cola de salida local. Usa las respuestas existentes de la conexión TLS y permite cancelar la prueba. Los resultados completados quedan en el historial de Actividad para su exportación.
 
 - Instalador por usuario con runtime incluido y migración opcional del perfil portable del mismo PC.
 - Carpeta de recepción configurable por equipo.

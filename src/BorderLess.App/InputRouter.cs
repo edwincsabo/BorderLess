@@ -24,8 +24,8 @@ internal sealed partial class InputRouter
     private int parkedActualX, parkedActualY;
     private bool parkingPending;
     private long parkingSince;
-    private long sequence, x, y, edgeSince, lastEdge, pendingSince;
-    private string edgeSide = "";
+    private long sequence, x, y, lastEdge, pendingSince;
+    private EdgeHold edgeHold;
     public bool Paused { get; private set; }
     public bool SessionLocked { get { lock (gate) return sharingPause.Locked; } }
     public bool ManualPause { get { lock (gate) return sharingPause.Manual; } }
@@ -118,6 +118,7 @@ internal sealed partial class InputRouter
         if (wasOutgoing)
             foreach (var key in physicalKeys.Where(k => k.Key is 0x10 or 0x11 or 0x12 or 0xa0 or 0xa1 or 0xa2 or 0xa3 or 0xa4 or 0xa5).ToArray())
                 try { desktop.Inject(Native.Key(key.Key, key.Value, false)); } catch (System.ComponentModel.Win32Exception) { }
+        edgeHold.Reset();
         Status = message; lastEdge = Stopwatch.GetTimestamp(); Changed?.Invoke();
     }
     private void ReleaseInjected()
@@ -173,7 +174,7 @@ internal sealed partial class InputRouter
                 case 0x20e: kind = InputKind.HorizontalWheel; data = unchecked((short)(value.Data >> 16)); break;
                 default: return true;
             }
-            if (!outgoing.Send(Frame.FromInput(new(kind, ++sequence, outgoingEpoch, x, y, code, data)))) ReturnLocked("La conexión no está disponible.");
+            if (!outgoing.SendInput(new(kind, ++sequence, outgoingEpoch, x, y, code, data))) ReturnLocked("La conexión no está disponible.");
             else Diagnostics.Sent();
             return true;
         }
@@ -187,13 +188,11 @@ internal sealed partial class InputRouter
     }
     private void CheckEdge(Native.Point point)
     {
-        if (desktop.IsKeyDown(1) || desktop.IsKeyDown(2) || desktop.IsKeyDown(4)) return;
-        if (Stopwatch.GetElapsedTime(lastEdge).TotalSeconds < 1) return;
+        if (desktop.IsKeyDown(1) || desktop.IsKeyDown(2) || desktop.IsKeyDown(4) || Stopwatch.GetElapsedTime(lastEdge).TotalSeconds < 1)
+        { edgeHold.Reset(); return; }
         var bounds = desktop.Bounds;
         var side = point.X <= bounds.Left ? "left" : point.X >= bounds.Left + bounds.Width - 1 ? "right" : point.Y <= bounds.Top ? "top" : point.Y >= bounds.Top + bounds.Height - 1 ? "bottom" : "";
-        if (side == "") { edgeSide = ""; return; }
-        if (edgeSide != side) { edgeSide = side; edgeSince = Stopwatch.GetTimestamp(); return; }
-        if (Stopwatch.GetElapsedTime(edgeSince).TotalMilliseconds < 160) return;
+        if (!edgeHold.Ready(side, Stopwatch.GetTimestamp(), settings.FastEdgeCrossing)) return;
         var peerId = side switch { "left" => leftNeighbor, "right" => rightNeighbor, "top" => topNeighbor, _ => bottomNeighbor };
         if (peerId is Guid id && hub.Inputs.TryGetValue(id, out var session))
         { lastEdge = Stopwatch.GetTimestamp(); Request(session, PlacementRules.Opposite(side), (double)(point.Y - bounds.Top) / Math.Max(1, bounds.Height), (double)(point.X - bounds.Left) / Math.Max(1, bounds.Width)); }

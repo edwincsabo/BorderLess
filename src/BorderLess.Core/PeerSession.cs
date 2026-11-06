@@ -24,6 +24,35 @@ public sealed class PeerSession : IAsyncDisposable
     public InputOutbox Outbox { get; } = new();
     private readonly Channel<Frame> bulk = Channel.CreateBounded<Frame>(new BoundedChannelOptions(8) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
     public double Rtt { get; private set; }
+    private event Action<long, double>? RttObserved;
+
+    public async Task<LatencyResult> MeasureLatencyAsync(CancellationToken cancellationToken)
+    {
+        if (Lane != "input") throw new InvalidOperationException("Selecciona una conexión de entrada.");
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stop.Token);
+        var started = Stopwatch.GetTimestamp();
+        var duration = TimeSpan.FromSeconds(30);
+        var samples = new List<double>(32);
+        void Record(long sentAt, double milliseconds)
+        {
+            if (sentAt < started || Stopwatch.GetElapsedTime(started) >= duration) return;
+            lock (samples) { if (samples.Count < 64) samples.Add(milliseconds); }
+        }
+        RttObserved += Record;
+        try
+        {
+            var peakDepth = 0;
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+            do
+            {
+                peakDepth = Math.Max(peakDepth, Outbox.Count);
+                await timer.WaitForNextTickAsync(cancellation.Token).ConfigureAwait(false);
+            } while (Stopwatch.GetElapsedTime(started) < duration);
+            cancellation.Token.ThrowIfCancellationRequested();
+            lock (samples) { return LatencyResult.Summarize(samples, peakDepth); }
+        }
+        finally { RttObserved -= Record; }
+    }
     public long Sent => Interlocked.Read(ref sent);
     public long Received => Interlocked.Read(ref received);
     public event Action<PeerSession, Frame>? Message;
@@ -33,7 +62,16 @@ public sealed class PeerSession : IAsyncDisposable
     {
         if (!Connected) return false;
         if (Lane != "input") return bulk.Writer.TryWrite(frame);
-        if (Outbox.Enqueue(frame)) return true;
+        return FinishEnqueue(Outbox.Enqueue(frame));
+    }
+    public bool SendInput(InputEvent input)
+    {
+        if (Lane != "input" || !Connected) return false;
+        return FinishEnqueue(Outbox.EnqueueInput(input));
+    }
+    private bool FinishEnqueue(bool queued)
+    {
+        if (queued) return true;
         Close("La cola de acciones alcanzó su límite; se liberó el control.");
         return false;
     }
@@ -75,7 +113,11 @@ public sealed class PeerSession : IAsyncDisposable
             {
                 var stamp = frame.Read<long>();
                 var rtt = Stopwatch.GetElapsedTime(stamp).TotalMilliseconds;
-                if (rtt >= 0 && rtt < 60000) Rtt = rtt;
+                if (rtt >= 0 && rtt < 60000)
+                {
+                    Rtt = rtt;
+                    RttObserved?.Invoke(stamp, rtt);
+                }
             }
             else
             {

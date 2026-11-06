@@ -2,12 +2,15 @@
 
 Un mouse y un teclado para tus PCs Windows 11. Controla otro equipo al cruzar el borde de la pantalla y comparte texto, imágenes y archivos mediante conexiones cifradas. No transmite la pantalla.
 
-**Versión 0.1.11 · Windows 11 x64 · Español / English**
+**Versión 0.1.14 · Windows 11 x64 · Español / English**
 
 [Descargas y versiones](https://github.com/edwincsabo/BorderLess/releases) · [Instalación](INSTALAR.md) · [Guía de uso](COMO_USAR.md) · [Actualizar portable](ACTUALIZAR.md) · [Licencia](LICENSE)
 
 ## Funciones
 
+- Recupera un vínculo directo desde **Equipos → Actualizar dirección** si cambia la IP del receptor. La nueva dirección se guarda tras verificar su identidad.
+- Abre **Mostrar en carpeta** desde una recepción completada para seleccionar el archivo en el Explorador.
+- Activa **Cruce rápido de borde** en Preferencias para pasar de 160 a 80 ms de espera en el borde elegido.
 - Mouse y teclado entre equipos, acceso por los cuatro bordes y recuperación con **Ctrl + Alt + F12**.
 - PIN de ocho dígitos, detección local y reconexión con credenciales guardadas.
 - Canales TLS separados para entrada, portapapeles y archivos.
@@ -36,6 +39,8 @@ Opción por PC, desactivada por defecto. Se libera al pausar, bloquear, suspende
 ![Archivos y carpeta de recepción en modo claro](docs/images/archivos-claro.png)
 
 ## Empezar
+
+En **Actividad** puedes elegir un equipo conectado y pulsar **Medir durante 30 segundos**. El resultado muestra la mediana y el mayor RTT recibido, junto con el máximo observado en la cola local. Queda en el historial de la sesión y en el diagnóstico exportado.
 
 1. Descarga **setup-win-x64.exe** de [Releases](https://github.com/edwincsabo/BorderLess/releases). Incluye .NET. También hay portable completo y actualización pequeña para portables existentes.
 2. Si ya usas el portable, sal mediante **Salir** e importa la carpeta **data de ese mismo PC y usuario** en el asistente. No copies perfiles entre PCs.

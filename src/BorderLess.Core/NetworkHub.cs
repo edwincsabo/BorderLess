@@ -22,6 +22,7 @@ public sealed partial class NetworkHub : IAsyncDisposable
     public DesktopSnapshot? LocalDesktop => Volatile.Read(ref localDesktop);
     public event Action<Guid>? DesktopChanged;
     private readonly ConcurrentDictionary<Guid, byte> connecting = new();
+    private readonly object addressGate = new();
     private readonly SemaphoreSlim incoming = new(12, 12);
     private readonly CancellationTokenSource stop = new();
     private TcpListener? listener;
@@ -166,16 +167,47 @@ public sealed partial class NetworkHub : IAsyncDisposable
     }
     public async Task ConnectAsync(Guid id, CancellationToken ct = default)
     {
-        if (!Credentials.TryGetValue(id, out var peer) || !peer.Initiator) return;
         if (!connecting.TryAdd(id, 0)) return;
         try
         {
+            if (!Credentials.TryGetValue(id, out var peer) || !peer.Initiator) return;
             if (!Inputs.ContainsKey(id)) await ConnectLaneAsync(peer, "input", false, ct).ConfigureAwait(false);
             if (!clipboardPaused && !Clipboards.ContainsKey(id)) await ConnectLaneAsync(peer, "clipboard", false, ct).ConfigureAwait(false);
         }
         finally { connecting.TryRemove(id, out _); }
     }
-    private async Task<PeerCredentials> ConnectLaneAsync(PeerCredentials peer, string lane, bool pairing, CancellationToken ct)
+    public async Task ReconnectAtAsync(Guid id, string host, int port, Action<PeerCredentials> saveAddress, CancellationToken ct)
+    {
+        host = host.Trim();
+        if (port is < 1 or > 65535 || host.Length is < 1 or > 253 || (Uri.CheckHostName(host) == UriHostNameType.Unknown && !IPAddress.TryParse(host, out _)))
+            throw new ArgumentException("Indica una IP o nombre de equipo y un puerto válido.");
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(ct, stop.Token);
+        while (!connecting.TryAdd(id, 0)) await Task.Delay(100, request.Token).ConfigureAwait(false);
+        try
+        {
+            if (!Credentials.TryGetValue(id, out var original) || !original.Initiator || !string.IsNullOrEmpty(original.RelayRoom))
+                throw new InvalidOperationException("Actualiza la dirección en el PC que inició el vínculo directo.");
+            if (Inputs.TryGetValue(id, out var live) && live.Connected)
+                throw new InvalidOperationException("El equipo ya está conectado.");
+            var candidate = original with { Host = host, Port = port };
+            await ConnectLaneAsync(candidate, "input", false, request.Token, verified =>
+            {
+                request.Token.ThrowIfCancellationRequested();
+                if (!Credentials.TryUpdate(id, verified, original)) throw new InvalidOperationException("El vínculo cambió durante la conexión.");
+                try { saveAddress(verified); }
+                catch { Credentials.TryUpdate(id, original, verified); throw; }
+            }).ConfigureAwait(false);
+            // The normal reconnect loop also repairs clipboard if its separate handshake fails.
+            if (!clipboardPaused && !Clipboards.ContainsKey(id))
+            {
+                try { await ConnectLaneAsync(candidate, "clipboard", false, request.Token).ConfigureAwait(false); }
+                catch (Exception ex) when (ex is IOException or SocketException or AuthenticationException or OperationCanceledException or ObjectDisposedException or InvalidDataException)
+                { Log("Entrada conectada. Se reintentará el canal de portapapeles.", true); }
+            }
+        }
+        finally { connecting.TryRemove(id, out _); }
+    }
+    private async Task<PeerCredentials> ConnectLaneAsync(PeerCredentials peer, string lane, bool pairing, CancellationToken ct, Action<PeerCredentials>? verifiedAddress = null)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct, stop.Token);
         deadline.CancelAfter(TimeSpan.FromSeconds(10));
@@ -209,7 +241,13 @@ public sealed partial class NetworkHub : IAsyncDisposable
             welcome.Desktop?.Validate();
             if (welcome.FileRevision is < 0 or > 1 || welcome.FileRevision > challenge.FileRevision) throw new AuthenticationException();
             if (lane == "file" && (!FilesEnabled || !welcome.FilesEnabled || welcome.FileRevision != 1 || !CanTransferFiles(peer.Id))) throw new AuthenticationException("Transferencia deshabilitada.");
-            Attach(established, lane, client, stream, !string.IsNullOrEmpty(peer.RelayRoom), welcome.InputRevision, welcome.LayoutRevision, welcome.Desktop, welcome.FileRevision, welcome.FilesEnabled);
+            lock (addressGate)
+            {
+                if (!pairing && (!Credentials.TryGetValue(peer.Id, out var trusted) || trusted.Fingerprint != peer.Fingerprint || !CryptographicOperations.FixedTimeEquals(trusted.Key, peer.Key)))
+                    throw new AuthenticationException("El vínculo cambió durante la conexión.");
+                verifiedAddress?.Invoke(established);
+                Attach(established, lane, client, stream, !string.IsNullOrEmpty(peer.RelayRoom), welcome.InputRevision, welcome.LayoutRevision, welcome.Desktop, welcome.FileRevision, welcome.FilesEnabled);
+            }
             return established;
         }
         catch { stream?.Dispose(); client.Dispose(); throw; }
@@ -268,7 +306,7 @@ public sealed partial class NetworkHub : IAsyncDisposable
     }
     public void Forget(Guid id)
     {
-        Credentials.TryRemove(id, out _);
+        lock (addressGate) Credentials.TryRemove(id, out _);
         RemoteDesktops.TryRemove(id, out _);
         if (Inputs.TryRemove(id, out var input)) input.Close("Equipo desvinculado.");
         if (Clipboards.TryRemove(id, out var clip)) clip.Close("Equipo desvinculado.");

@@ -1,6 +1,6 @@
-# BorderLess 0.1.11 para Windows 11 x64
+# BorderLess 0.1.14 para Windows 11 x64
 
-Puedes usar el instalador `BorderLess-0.1.11-setup-win-x64.exe` siguiendo **INSTALAR.md**, o conservar la versión portable. Si ya utilizas un portable 0.1.x, consulta `ACTUALIZAR.md` para conservar vínculos y preferencias. La 0.1.11 añade una carpeta de recepción configurable y conserva las funciones y optimizaciones anteriores.
+Puedes usar el instalador `BorderLess-0.1.14-setup-win-x64.exe` siguiendo **INSTALAR.md**, o conservar la versión portable. Si ya utilizas un portable 0.1.x, consulta `ACTUALIZAR.md` para conservar vínculos y preferencias. La 0.1.14 añade reconexión por dirección, acceso al archivo recibido en su carpeta y cruce rápido opcional.
 
 ## Primera conexión por cable
 
@@ -8,7 +8,7 @@ Puedes usar el instalador `BorderLess-0.1.11-setup-win-x64.exe` siguiendo **INST
 2. Desactiva **Mouse sin bordes** de PowerToys antes de controlar para evitar que ambos programas capturen la entrada. BorderLess no cambia PowerToys por ti.
 3. En el PC receptor: **Añadir equipo → Recibir en este PC → Generar código de 8 dígitos**. El código vence a los 2 minutos, admite hasta 5 intentos y se usa una sola vez. Mantén el panel abierto.
 4. En el otro PC: **Añadir equipo → Conectar a otro PC → Buscar equipos**. Selecciona el receptor, escribe sus 8 dígitos y pulsa **Vincular con PIN**. Si no aparece, introduce manualmente su IP o nombre y puerto (normalmente 45161), que se muestran en el receptor. El PIN correcto completa el vínculo automáticamente: no hace falta volver al receptor para confirmar.
-5. Cierra el panel. Pulsa **Controlar** o el equipo conectado en el mapa; también puedes asignarle un borde y mantener el mouse en ese borde unos 160 ms. El equipo receptor debe tener permitido el control en sus Preferencias.
+5. Cierra el panel. Pulsa **Controlar** o el equipo conectado en el mapa; también puedes asignarle un borde y mantener el mouse en ese borde unos 160 ms (80 ms con el cruce rápido activado en Preferencias). El equipo receptor debe tener permitido el control en sus Preferencias.
 6. Para volver: cruza el borde por el que entraste, usa **Ctrl + Alt + F12**, o pulsa **Volver aquí**. Si estás en el receptor, mover su mouse físico o usar su teclado recupera su control local.
 
 Si Windows solicita permitir tráfico de red para el ejecutable, revisa y concede tú el permiso adecuado a tu red. El puerto de recepción predeterminado es **TCP 45161**. No hay cambios automáticos de firewall, privilegios o router. Una conexión que el firewall bloquee no podrá completarse.
@@ -49,6 +49,26 @@ Mientras exista al menos una conexión de entrada autenticada y el uso compartid
 La solicitud se libera al pausar, desmarcar la opción, desconectar el último equipo, bloquear Windows, suspender o salir. Al reanudar o reconectar vuelve a solicitarse si se cumplen las condiciones. No mueve el puntero, no escribe teclas, no añade tráfico de red y no modifica configuraciones de energía ni políticas del equipo.
 
 Windows decide si respeta la solicitud. No desbloquea una sesión ni impide Win + L, suspensión manual, cierre de tapa o políticas empresariales de bloqueo. Mantener la pantalla encendida puede aumentar el consumo de batería. Una conexión cortada se considera perdida cuando la red o el heartbeat detectan el cierre, no necesariamente en el instante en que se retira un cable.
+
+## Recuperar una conexión directa que cambió de dirección
+
+En el PC que inició el vínculo, abre **Equipos → Actualizar dirección** en la ficha del equipo desconectado. Introduce la IP o el nombre y el puerto que muestra el receptor. Pulsa **Verificar y reconectar**. BorderLess comprueba el certificado y la clave existentes antes de guardar la dirección. El alias, el borde y las preferencias del equipo se conservan. Si el receptor cambió de identidad, genera un PIN para establecer un vínculo nuevo. Los vínculos mediante relay conservan su configuración propia.
+
+## Cruce de borde
+
+La espera habitual al mantener el mouse en un borde es de 160 ms. Puedes elegir **Preferencias → Entrada y portapapeles → Cruce rápido de borde** para reducirla a 80 ms en el PC desde el que controlas. Aplica al cruce automático y conserva la pausa de un segundo que evita un retorno accidental inmediatamente después de recuperar el control. El tiempo total de cambio también incluye la respuesta del otro PC.
+
+## Localizar una recepción
+
+En **Archivos → Transferencias de esta sesión**, pulsa **Mostrar en carpeta** en una recepción completada. El Explorador selecciona el archivo en la ubicación donde terminó la transferencia, incluso si después cambiaste la carpeta de recepción. Si moviste o borraste el archivo, la app muestra un aviso.
+
+## Medir la latencia de una conexión
+
+En **Actividad**, selecciona un equipo conectado y pulsa **Medir durante 30 segundos**. Usa el mouse y el teclado como de costumbre, incluso si cambias de pantalla. Repite desde el otro PC para observar su cola de salida en las mismas condiciones. Puedes cancelar una medición en curso. Una desconexión interrumpe la prueba, aunque el equipo vuelva a conectar.
+
+El RTT mide la ida y vuelta de los mensajes periódicos que BorderLess ya envía. La mediana resume el tiempo habitual y el máximo muestra el peor valor recibido durante la prueba. La profundidad de la cola local se observa cada 100 ms: un cero indica que estaba vacía en esos instantes. Los picos entre muestras pueden pasar inadvertidos. El tiempo hasta ver moverse el cursor también depende de Windows y del dibujo del puntero.
+
+Cada prueba completada aparece en el historial de Actividad. **Exportar diagnóstico** incluye esos resultados mientras sigan en el historial de la sesión.
 
 ## Portapapeles
 
@@ -92,7 +112,7 @@ En esta versión el receptor debe volver a activar el relay después de reinicia
 - Certificado y claves se guardan protegidos con DPAPI del usuario Windows en `data/settings.json` junto al portable o `%LOCALAPPDATA%\BorderLess\data\settings.json` en el formato instalado. Copia el ZIP o instalador limpio al segundo equipo; no copies la carpeta `data` de uno al otro. Cada PC necesita su propia identidad.
 - **Desvincular** revoca la credencial local y cierra los canales. Si desvinculas en un solo PC, el otro puede seguir intentando conectar, pero no se autenticará.
 - Entrada en hilo dedicado; espera de red fuera del hook; cola acotada, coalescencia de movimiento acumulado, épocas de sesión y liberación de entrada sintética ante cierre/fallo.
-- Heartbeat y reconexión automática en el PC que inició el vínculo. Si cambia la IP o identidad del receptor, vuelve a vincular con un código nuevo.
+- Heartbeat y reconexión automática en el PC que inició el vínculo. Si cambia la IP del receptor, usa Actualizar dirección en Equipos. Si cambia su identidad, vuelve a vincularlo con un PIN.
 - La X y minimizar mantienen la app activa en la bandeja junto al reloj. Doble clic en el icono abre la ventana. El menú del icono permite abrir, pausar, recuperar el control y Salir; Preferencias también incluye Salir. El tema Claro/Oscuro se guarda en Preferencias.
 - Por defecto se pausa al bloquear Windows y se reanuda al desbloquear, conservando cualquier pausa manual. La preferencia Pausar el uso compartido al bloquear Windows permite desactivar la pausa automática de los servicios de datos. No controla la pantalla de bloqueo ni el escritorio seguro de UAC. Las ventanas elevadas requieren integridad equivalente; si una aplicación se ejecuta como administrador, la inyección de un proceso normal puede ser bloqueada.
 - Actividad muestra datos de funcionamiento; no guarda teclas o contenido. El diagnóstico exportado puede incluir nombres/direcciones que hayas usado y debes revisarlo antes de compartirlo.

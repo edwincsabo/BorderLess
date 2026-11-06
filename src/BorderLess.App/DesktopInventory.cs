@@ -9,7 +9,8 @@ internal static class DesktopInventory
     [DllImport("user32.dll")] private static extern bool EnumDisplayMonitors(IntPtr dc, IntPtr clip, MonitorCallback callback, IntPtr data);
     [DllImport("user32.dll", EntryPoint = "GetMonitorInfoW", CharSet = CharSet.Unicode)] private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorEx info);
     [DllImport("shcore.dll")] private static extern int GetScaleFactorForMonitor(IntPtr monitor, out int scale);
-    public static DesktopSnapshot Capture(string label)
+    public static DesktopSnapshot Capture(string label) => Capture(label, out _);
+    public static DesktopSnapshot Capture(string label, out bool hasMonitorRectangles)
     {
         var monitors = new List<DisplayMonitor>();
         EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr handle, IntPtr dc, ref Native.Rect rect, IntPtr data) =>
@@ -22,7 +23,8 @@ internal static class DesktopInventory
             }
             return monitors.Count < 16;
         }, IntPtr.Zero);
-        if (monitors.Count == 0)
+        hasMonitorRectangles = monitors.Count != 0;
+        if (!hasMonitorRectangles)
         {
             var b = Native.Bounds;
             monitors.Add(new("Escritorio Windows", b.Left, b.Top, b.Width, b.Height, true));

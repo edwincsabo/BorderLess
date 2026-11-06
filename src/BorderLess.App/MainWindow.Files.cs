@@ -31,13 +31,16 @@ public partial class MainWindow
         public string Size => $"{FormatBytes(Item.Bytes)} / {FormatBytes(Item.Length)}";
         public double Percent => Item.Length == 0 ? Item.State == TransferState.Completed ? 100 : 0 : 100d * Item.Bytes / Item.Length;
         public Visibility Acceptance => Item.Incoming && Item.State == TransferState.Waiting ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility Reveal => Item.Incoming && Item.State == TransferState.Completed && !string.IsNullOrEmpty(Item.SavedPath) ? Visibility.Visible : Visibility.Collapsed;
         public Visibility Cancellation => Item.State is TransferState.Sending or TransferState.Receiving || !Item.Incoming && Item.State == TransferState.Waiting ? Visibility.Visible : Visibility.Collapsed;
         public void Update(FileTransferSnapshot item, string peer)
         {
             if (item.Id != Id) throw new ArgumentException("A transfer row retains its identity.");
             if (Item == item && Peer == peer) return;
             var title = Title; var direction = Direction; var detail = Detail; var size = Size; var percent = Percent; var acceptance = Acceptance; var cancellation = Cancellation;
+            var reveal = Reveal;
             Item = item; Peer = peer;
+            if (Reveal != reveal) Changed(nameof(Reveal));
             if (Title != title) Changed(nameof(Title));
             if (Direction != direction) Changed(nameof(Direction));
             if (Detail != detail) Changed(nameof(Detail));
@@ -126,6 +129,29 @@ public partial class MainWindow
     private async void AcceptFile(object sender, RoutedEventArgs e) { if (((Button)sender).Tag is Guid id) await files.AcceptAsync(id); }
     private async void RejectFile(object sender, RoutedEventArgs e) { if (((Button)sender).Tag is Guid id) await files.RejectAsync(id); }
     private async void CancelFile(object sender, RoutedEventArgs e) { if (((Button)sender).Tag is Guid id) await files.CancelAsync(id); }
+    private Action<string> showReceivedFile = ShowInExplorer;
+    private static void ShowInExplorer(string path)
+    {
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"),
+            Arguments = $"/select,\"{path}\"", UseShellExecute = false
+        });
+    }
+    private async void RevealFile(object sender, RoutedEventArgs e)
+    {
+        if (((Button)sender).DataContext is not TransferRow row || row.Reveal != Visibility.Visible) return;
+        var path = row.Item.SavedPath;
+        UiText.Text(RevealFeedback, "");
+        if (!Path.IsPathFullyQualified(path) || !await Task.Run(() => File.Exists(path)))
+        {
+            UiText.Text(RevealFeedback, "El archivo ya no está disponible en su ubicación original.");
+            return;
+        }
+        if (closing) return;
+        try { showReceivedFile(path); }
+        catch (Win32Exception) { UiText.Text(RevealFeedback, "No se pudo mostrar el archivo en el Explorador."); }
+    }
     private void OpenReceiveFolder(object sender, RoutedEventArgs e)
     {
         try { Directory.CreateDirectory(files.ReceiveDirectory); Process.Start(new ProcessStartInfo { FileName = files.ReceiveDirectory, UseShellExecute = true }); }
